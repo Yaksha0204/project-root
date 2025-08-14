@@ -3,30 +3,21 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
-        DOCKERHUB_USER = "${DOCKERHUB_CREDENTIALS_USR}"
-        DOCKERHUB_PASS = "${DOCKERHUB_CREDENTIALS_PSW}"
-        DOCKERHUB_REPO = "yaksha0204/project-root" // change if your Docker Hub repo name differs
+        DOCKER_IMAGE = "yaksha0204/project-root"
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/Yaksha0204/project-root.git'
+                git branch: 'main',
+                    url: 'https://github.com/Yaksha0204/project-root.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKERHUB_REPO}:latest ."
-                }
-            }
-        }
-
-        stage('Login to Docker Hub') {
-            steps {
-                script {
-                    sh "echo ${DOCKERHUB_PASS} | docker login -u ${DOCKERHUB_USER} --password-stdin"
+                    sh 'docker build -t $DOCKER_IMAGE:latest -f dockerfile .'
                 }
             }
         }
@@ -34,16 +25,19 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    sh "docker push ${DOCKERHUB_REPO}:latest"
+                    sh "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"
+                    sh "docker push $DOCKER_IMAGE:latest"
                 }
             }
         }
     }
 
     post {
-        always {
-            sh 'docker logout'
+        success {
+            echo 'Docker image built and pushed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
-
